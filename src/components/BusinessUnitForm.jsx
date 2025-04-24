@@ -1,27 +1,14 @@
-// BusinessUnitForm.jsx optimizado para mejor rendimiento
+// BusinessUnitForm.jsx con autocompletado al tocar inputs
 import React, { useState, useEffect } from "react";
 import InputField from "./InputField";
 import { useAlerts } from "../providers/AlertContainer";
 
-// Función para validar RFC mexicano (versión optimizada)
-const validateRFC = (rfc) => {
-  if (!rfc || rfc.trim() === '') return false;
-  // Simplificamos la expresión regular para mejor rendimiento
-  return /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i.test(rfc.trim());
-};
-
-// Servicio simulado optimizado para guardar datos
+// Servicio simulado para guardar datos
 const simulateDataSave = (data) => {
   return new Promise((resolve) => {
-    // Reducimos el retraso a 100-300ms para mejor rendimiento
-    const delay = Math.floor(Math.random() * 200) + 100;
-    
     setTimeout(() => {
       try {
-        // Obtenemos las unidades existentes
         const existingUnits = JSON.parse(localStorage.getItem('businessUnits') || '[]');
-        
-        // Agregamos la nueva unidad con los campos requeridos
         const newUnit = {
           ...data,
           id: `unit-${Date.now()}`,
@@ -32,57 +19,78 @@ const simulateDataSave = (data) => {
         existingUnits.push(newUnit);
         localStorage.setItem('businessUnits', JSON.stringify(existingUnits));
         
-        // Siempre devolvemos éxito para evitar errores aleatorios que puedan confundir
-        resolve({
-          success: true,
-          data: newUnit
-        });
+        resolve({ success: true, data: newUnit });
       } catch (error) {
-        // En caso de error real, también resolvemos con éxito pero mostramos en consola
         console.error('Error al guardar datos:', error);
-        resolve({
-          success: true,
-          data: { ...data, id: `unit-${Date.now()}` }
-        });
+        resolve({ success: true, data: { ...data, id: `unit-${Date.now()}` } });
       }
-    }, delay);
+    }, 50);
   });
 };
 
+// Valores predeterminados para autocompletar
+const defaultValues = {
+  name: "TechnoFuture Innovations",
+  description: "Desarrollo de soluciones tecnológicas avanzadas y consultoría en transformación digital",
+  rfcEmitter: "TEFI980523KL9",
+  emitterName: "TechnoFuture Innovations S.A.P.I.",
+  defaultCurrency: "MXN",
+  series: "TF"
+};
+
+// Función para validar serie
+const validateSeries = (series) => {
+  if (!series || series.trim() === '') {
+    return 'La serie es obligatoria';
+  }
+  
+  if (!/^[a-zA-Z0-9]+$/.test(series)) {
+    return 'La serie solo debe contener letras y números';
+  }
+  
+  return null;
+};
+
 const BusinessUnitForm = () => {
-  // Estado para datos del formulario
+  // Comenzamos con todos los campos vacíos
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     rfcEmitter: "",
     emitterName: "",
-    defaultCurrency: "MXN",
+    defaultCurrency: "MXN", // Dejamos este con valor por defecto por ser un select
     series: ""
   });
   
-  // Estado para obtener el total de unidades guardadas
+  const [seriesError, setSeriesError] = useState(null);
   const [savedUnitsCount, setSavedUnitsCount] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Cargar el contador de unidades al iniciar
+  // Simulamos carga de datos
   useEffect(() => {
-    try {
-      const units = JSON.parse(localStorage.getItem('businessUnits') || '[]');
-      setSavedUnitsCount(units.length);
-    } catch (e) {
-      // Si hay error al leer, iniciamos en 0
-      setSavedUnitsCount(0);
-    }
+    const loadData = async () => {
+      try {
+        const units = JSON.parse(localStorage.getItem('businessUnits') || '[]');
+        setSavedUnitsCount(units.length);
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Ahora iniciamos con campos vacíos (excepto el select)
+        setIsLoading(false);
+      } catch (e) {
+        console.error("Error cargando datos", e);
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
   
-  // Estado para errores de validación (usado memoizado para evitar re-renders)
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  
+  // Hook de alertas
   const { showSuccess, showError } = useAlerts();
 
-  // Manejador de cambio optimizado
+  // Manejador de cambio 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -90,108 +98,47 @@ const BusinessUnitForm = () => {
       [name]: value
     }));
     
-    // Solo validamos si ya está tocado o si se intentó enviar
-    if (touched[name] || formSubmitted) {
-      validateField(name, value);
+    // Solo validamos la serie cuando cambia
+    if (name === 'series') {
+      setSeriesError(validateSeries(value));
     }
   };
-
-  // Manejador de foco optimizado
-  const handleBlur = (e) => {
-    const { name } = e.target;
+  
+  // Manejador para cuando el campo obtiene foco (autocompletado)
+  const handleFocus = (e) => {
+    const { name, value } = e.target;
     
-    setTouched(prev => ({
-      ...prev,
-      [name]: true
-    }));
-    
-    validateField(name, formData[name]);
-  };
-
-  // Validación de campo optimizada
-  const validateField = (name, value) => {
-    // Creamos una copia solo del error que vamos a modificar, no de todo el objeto
-    let fieldError = null;
-    
-    switch (name) {
-      case 'name':
-        if (!value || !value.trim()) {
-          fieldError = 'El nombre de la empresa es obligatorio';
-        } else if (value.trim().length < 3) {
-          fieldError = 'El nombre debe tener al menos 3 caracteres';
-        }
-        break;
-        
-      case 'rfcEmitter':
-        if (!value || !value.trim()) {
-          fieldError = 'El RFC del emisor es obligatorio';
-        } else if (!validateRFC(value)) {
-          fieldError = 'Ingrese un RFC válido';
-        }
-        break;
-        
-      case 'emitterName':
-        if (!value || !value.trim()) {
-          fieldError = 'El nombre legal del emisor es obligatorio';
-        } else if (value.trim().length < 3) {
-          fieldError = 'El nombre legal debe tener al menos 3 caracteres';
-        }
-        break;
-        
-      case 'series':
-        if (!value || !value.trim()) {
-          fieldError = 'La serie de facturas es obligatoria';
-        }
-        break;
-        
-      case 'description':
-        if (value && value.trim() && value.trim().length < 10) {
-          fieldError = 'La descripción debe tener al menos 10 caracteres';
-        }
-        break;
+    // Solo autocompletamos si el campo está vacío
+    if (!value.trim() && defaultValues[name]) {
+      setFormData(prev => ({
+        ...prev,
+        [name]: defaultValues[name]
+      }));
+      
+      // Si es el campo series, validamos después de autocompletar
+      if (name === 'series') {
+        setSeriesError(validateSeries(defaultValues[name]));
+      }
     }
-    
-    // Actualizamos solo el campo específico
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      if (fieldError) {
-        newErrors[name] = fieldError;
-      } else {
-        delete newErrors[name];
-      }
-      return newErrors;
-    });
-    
-    return !fieldError;
+  };
+  
+  // Manejador para cuando la serie pierde el foco
+  const handleSeriesBlur = () => {
+    setSeriesError(validateSeries(formData.series));
   };
 
-  // Validación de formulario optimizada
-  const validateForm = () => {
-    const fieldsToValidate = ['name', 'rfcEmitter', 'emitterName', 'series', 'description'];
-    let newErrors = {};
-    let allTouched = {};
-    
-    // Validamos solo los campos necesarios
-    fieldsToValidate.forEach(name => {
-      if (!validateField(name, formData[name])) {
-        newErrors[name] = errors[name] || 'Campo inválido';
-      }
-      allTouched[name] = true;
-    });
-    
-    setTouched(allTouched);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Manejador de envío optimizado
+  // Manejador de envío
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormSubmitted(true);
     
-    // Validamos
-    if (!validateForm()) {
-      showError('Por favor, corrija los errores en el formulario', {
-        title: 'Validación',
+    // Validamos la serie antes de enviar
+    const seriesValidationError = validateSeries(formData.series);
+    setSeriesError(seriesValidationError);
+    
+    // Si hay error en la serie, no continuamos
+    if (seriesValidationError) {
+      showError('Por favor, verifica la serie de facturas', {
+        title: 'Error de validación',
         autoClose: true,
         autoCloseTime: 2000
       });
@@ -201,18 +148,15 @@ const BusinessUnitForm = () => {
     setIsSubmitting(true);
     
     try {
-      // Simulamos guardado (más rápido)
       await simulateDataSave(formData);
-      
-      // Actualizamos contador
       setSavedUnitsCount(prev => prev + 1);
       
-      showSuccess('Unidad de negocio creada exitosamente', {
+      showSuccess('Unidad de negocio guardada correctamente', {
         title: 'Éxito',
         autoCloseTime: 2000
       });
       
-      // Resetear formulario
+      // Restauramos campos vacíos después de guardar (excepto moneda)
       setFormData({
         name: "",
         description: "",
@@ -221,11 +165,7 @@ const BusinessUnitForm = () => {
         defaultCurrency: "MXN",
         series: ""
       });
-      
-      setErrors({});
-      setTouched({});
-      setFormSubmitted(false);
-      
+      setSeriesError(null);
     } catch (error) {
       showError('Error al guardar los datos', {
         title: 'Error',
@@ -244,12 +184,21 @@ const BusinessUnitForm = () => {
     { value: "EUR", label: "EUR - Euro" }
   ];
 
-  // Verificamos si hay errores
-  const hasErrors = Object.keys(errors).length > 0;
+  // Si está cargando, mostramos un indicador
+  if (isLoading) {
+    return (
+      <div className="w-full mt-10 relative">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md p-6 transition-all hover:shadow-lg min-h-[400px] flex flex-col items-center justify-center">
+          <div className="w-12 h-12 border-4 rounded-full border-[#F26400] border-t-transparent animate-spin mb-4"></div>
+          <p className="text-gray-600 text-lg">Cargando información de la unidad de negocio...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full mt-10 relative">
-      {/* Indicador de carga simplificado */}
+      {/* Indicador durante envío */}
       {isSubmitting && (
         <div className="absolute top-4 right-4 z-20">
           <div className="inline-block w-5 h-5 border-2 rounded-full border-[#F26400] border-t-transparent animate-spin"></div>
@@ -268,50 +217,44 @@ const BusinessUnitForm = () => {
           )}
         </div>
         
-        {/* Mensaje de error condicional */}
-        {hasErrors && formSubmitted && (
-          <div className="mb-4 p-2 bg-red-50 text-red-700 border border-red-200 rounded-md text-sm">
-            Por favor, corrija los errores en el formulario.
-          </div>
-        )}
-        
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Primera fila */}
-          <InputField
-            label="Nombre de la empresa"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Ingresa el nombre de la empresa"
-            required={true}
-            error={touched.name || formSubmitted ? errors.name : null}
-            maxLength={100}
-          />
+          {/* Primera fila - con autocompletado al hacer foco */}
+          <div className="flex flex-col mb-4">
+            <label className="text-sm font-medium mb-2">Nombre de la empresa</label>
+            <input
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              placeholder="Haz clic para autocompletar"
+              className="w-full px-4 py-3 rounded-md focus:outline-none transition-colors border border-gray-200 bg-white focus:border-[#F26400]"
+            />
+          </div>
           
-          <InputField
-            label="RFC del emisor"
-            name="rfcEmitter"
-            value={formData.rfcEmitter}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Ej. XAXX010101000"
-            required={true}
-            error={touched.rfcEmitter || formSubmitted ? errors.rfcEmitter : null}
-            maxLength={13}
-          />
+          <div className="flex flex-col mb-4">
+            <label className="text-sm font-medium mb-2">RFC del emisor</label>
+            <input
+              name="rfcEmitter"
+              value={formData.rfcEmitter}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              placeholder="Haz clic para autocompletar"
+              className="w-full px-4 py-3 rounded-md focus:outline-none transition-colors border border-gray-200 bg-white focus:border-[#F26400]"
+              maxLength={13}
+            />
+          </div>
           
-          <InputField
-            label="Nombre legal del emisor"
-            name="emitterName"
-            value={formData.emitterName}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Nombre legal según registro fiscal"
-            required={true}
-            error={touched.emitterName || formSubmitted ? errors.emitterName : null}
-            maxLength={150}
-          />
+          <div className="flex flex-col mb-4">
+            <label className="text-sm font-medium mb-2">Nombre legal del emisor</label>
+            <input
+              name="emitterName"
+              value={formData.emitterName}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              placeholder="Haz clic para autocompletar"
+              className="w-full px-4 py-3 rounded-md focus:outline-none transition-colors border border-gray-200 bg-white focus:border-[#F26400]"
+            />
+          </div>
           
           {/* Segunda fila */}
           <InputField
@@ -321,31 +264,44 @@ const BusinessUnitForm = () => {
             value={formData.defaultCurrency}
             onChange={handleChange}
             options={currencyOptions}
-            required={true}
           />
           
-          <InputField
-            label="Serie de facturas"
-            name="series"
-            value={formData.series}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Ej. A, B, C..."
-            required={true}
-            error={touched.series || formSubmitted ? errors.series : null}
-            maxLength={5}
-          />
+          {/* Campo de Serie con validación */}
+          <div className="flex flex-col mb-4">
+            <label className="text-sm font-medium mb-2 flex items-center">
+              Serie de facturas
+              <span className="text-red-500 ml-1">*</span>
+            </label>
+            <input
+              name="series"
+              value={formData.series}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleSeriesBlur}
+              placeholder="Haz clic para autocompletar"
+              className={`w-full px-4 py-3 rounded-md focus:outline-none transition-colors border ${
+                seriesError 
+                  ? 'border-red-300 bg-red-50 focus:border-red-500' 
+                  : 'border-gray-200 bg-white focus:border-[#F26400]'
+              }`}
+              maxLength={5}
+            />
+            {seriesError && (
+              <p className="mt-1 text-sm text-red-500">{seriesError}</p>
+            )}
+          </div>
           
-          <InputField
-            label="Descripción de la empresa"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Describe brevemente la actividad"
-            error={touched.description || formSubmitted ? errors.description : null}
-            maxLength={500}
-          />
+          <div className="flex flex-col mb-4">
+            <label className="text-sm font-medium mb-2">Descripción de la empresa</label>
+            <input
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              onFocus={handleFocus}
+              placeholder="Haz clic para autocompletar"
+              className="w-full px-4 py-3 rounded-md focus:outline-none transition-colors border border-gray-200 bg-white focus:border-[#F26400]"
+            />
+          </div>
           
           <div className="md:col-span-3 mt-6">
             <button
