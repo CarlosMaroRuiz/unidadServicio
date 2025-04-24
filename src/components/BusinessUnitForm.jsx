@@ -1,4 +1,4 @@
-// BusinessUnitForm.jsx con autocompletado al tocar inputs
+// BusinessUnitForm.jsx con placeholders específicos
 import React, { useState, useEffect } from "react";
 import InputField from "./InputField";
 import { useAlerts } from "../providers/AlertContainer";
@@ -226,7 +226,7 @@ const BusinessUnitForm = () => {
               value={formData.name}
               onChange={handleChange}
               onFocus={handleFocus}
-              placeholder="Haz clic para autocompletar"
+              placeholder="Ingresa nombre de la empresa"
               className="w-full px-4 py-3 rounded-md focus:outline-none transition-colors border border-gray-200 bg-white focus:border-[#F26400]"
             />
           </div>
@@ -238,7 +238,7 @@ const BusinessUnitForm = () => {
               value={formData.rfcEmitter}
               onChange={handleChange}
               onFocus={handleFocus}
-              placeholder="Haz clic para autocompletar"
+              placeholder="Ej. XAXX010101000"
               className="w-full px-4 py-3 rounded-md focus:outline-none transition-colors border border-gray-200 bg-white focus:border-[#F26400]"
               maxLength={13}
             />
@@ -251,7 +251,7 @@ const BusinessUnitForm = () => {
               value={formData.emitterName}
               onChange={handleChange}
               onFocus={handleFocus}
-              placeholder="Haz clic para autocompletar"
+              placeholder="Razón social completa"
               className="w-full px-4 py-3 rounded-md focus:outline-none transition-colors border border-gray-200 bg-white focus:border-[#F26400]"
             />
           </div>
@@ -278,7 +278,7 @@ const BusinessUnitForm = () => {
               onChange={handleChange}
               onFocus={handleFocus}
               onBlur={handleSeriesBlur}
-              placeholder="Haz clic para autocompletar"
+              placeholder="Ej. A, B, C, TF"
               className={`w-full px-4 py-3 rounded-md focus:outline-none transition-colors border ${
                 seriesError 
                   ? 'border-red-300 bg-red-50 focus:border-red-500' 
@@ -298,7 +298,7 @@ const BusinessUnitForm = () => {
               value={formData.description}
               onChange={handleChange}
               onFocus={handleFocus}
-              placeholder="Haz clic para autocompletar"
+              placeholder="Describe la actividad principal"
               className="w-full px-4 py-3 rounded-md focus:outline-none transition-colors border border-gray-200 bg-white focus:border-[#F26400]"
             />
           </div>
